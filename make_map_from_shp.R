@@ -35,7 +35,7 @@ county <- fortify(county, region="COUNTYFP")
 
 p <- ggplot() +
   geom_polygon(data = tract_plot, aes(x = long, y = lat, group = group,
-                                    fill = pop_density)) +
+                                      fill = pop_density)) +
   geom_polygon(data = county, aes(x = long, y = lat, group = group),
                fill = NA, color = "white", size = 0.05) +
   coord_map() +
@@ -45,7 +45,7 @@ p <- ggplot() +
   theme_nothing(legend = TRUE) +
   labs(title = "Population Density in California\n from Census 2014 estimates",
        fill = "")
-ggsave(p, file = "pop_CA.png", width = 5, height = 4.5, type = "cairo-png")
+ggsave(p, file = "pop_CA.pdf", width = 5, height = 4.5)
 
 
 
@@ -62,7 +62,7 @@ county_plot$emp_density=emp_per_county[match(as.numeric(county_plot$id),emp_per_
 
 p2 <- ggplot() +
   geom_polygon(data = county_plot, aes(x = long, y = lat, group = group,
-                                      fill = emp_density)) +
+                                       fill = emp_density)) +
   geom_polygon(data = county_plot, aes(x = long, y = lat, group = group),
                fill = NA, color = "white", size = 0.05) +
   coord_map() +
@@ -72,7 +72,7 @@ p2 <- ggplot() +
   theme_nothing(legend = TRUE) +
   labs(title = "Employee Density in California\n from Econ 2012",
        fill = "")
-ggsave(p2, file = "emp_CA.png", width = 5, height = 4.5, type = "cairo-png")
+ggsave(p2, file = "emp_CA.pdf", width = 5, height = 4.5)
 
 
 speed_data <- read.csv("/home/seth/workspace_Unix/dataIncub/bbp/speed_by_county.csv", stringsAsFactors = FALSE)
@@ -94,7 +94,7 @@ p3 <- ggplot() +
   theme_nothing(legend = TRUE) +
   labs(title = "Median Download Speeds in California\n from BroadbandMap.gov",
        fill = "")
-ggsave(p3, file = "speed_CA.png", width = 5, height = 4.5, type = "cairo-png")
+ggsave(p3, file = "speed_CA.pdf", width = 5, height = 4.5)
 
 tot_emp=sum(ind_data$EMP)
 #yolo County
@@ -108,9 +108,9 @@ p4=ggplot(data=ind_group_113, aes(x=IndustryGroups, y=emp_prop, fill=IndustryGro
   theme_classic() + 
   geom_bar(stat="identity", position=position_dodge(), colour="black")+
   labs(title = 'Worker Proportions based on Industry Group in Yolo County', x = "Industry Groups", y = "Proportion of all employees in industry group")
-  # scale_fill_manual(values=c("#999999", "#E69F00"))
+# scale_fill_manual(values=c("#999999", "#E69F00"))
 
-ggsave(p4, file = "emp_prop_Yolo.png", width = 10, height = 7, type = "cairo-png")
+ggsave(p4, file = "emp_prop_Yolo.pdf", width = 10, height = 7)
 
 #orange County
 ind_data59=ind_data[ind_data$COUNTY==59,]
@@ -124,7 +124,7 @@ p5=ggplot(data=ind_group_59, aes(x=IndustryGroups, y=emp_prop, fill=IndustryGrou
   geom_bar(stat="identity", position=position_dodge(), colour="black")+
   labs(title = 'Worker Proportions based on Industry Group in Orange County', x = "Industry Groups", y = "Proportion of all employees in industry group")
 
-ggsave(p5, file = "emp_prop_Orange.png", width = 10, height = 7, type = "cairo-png")
+ggsave(p5, file = "emp_prop_Orange.pdf", width = 10, height = 7)
 
 #alemeda County
 ind_data1=ind_data[ind_data$COUNTY==1,]
@@ -138,7 +138,45 @@ p6=ggplot(data=ind_group_1, aes(x=IndustryGroups, y=emp_prop, fill=IndustryGroup
   geom_bar(stat="identity", position=position_dodge(), colour="black")+
   labs(title = 'Worker Proportions based on Industry Group in Alemeda County', x = "Industry Groups", y = "Proportion of all employees in industry group")
 
-ggsave(p6, file = "emp_prop_Alemeda.png", width = 10, height = 7, type = "cairo-png")
+ggsave(p6, file = "emp_prop_Alemeda.df", width = 10, height = 7)
 
 
 emp_per_county=aggregate(ind_data$EMP,by=list(ind_data$COUNTY), function(x) sum(as.numeric(x), na.rm =TRUE) )
+
+
+ind_prop_data <- read.csv("/home/seth/workspace_Unix/dataIncub/bbp/county_ind_prop_pivot.csv", stringsAsFactors = FALSE)
+# data$LAND_AREA_NUM=as.numeric(data$LAND_AREA)
+# data$Tot_Population_ACS_09_13_NUM=as.numeric(data$Tot_Population_ACS_09_13)
+# data$pop_density=data$Tot_Population_ACS_09_13_NUM/data$LAND_AREA_NUM
+# data$id <- paste("1400000US", data$id, sep = "")
+# data_plot <- data[,c("tract", "pop_density")]
+# # colnames(data) <- c("id", "percent")
+# # data$id <- as.character(data$id)
+# # data$percent <- data$percent/100
+# # 
+# # data$id <- paste("1400000US", data$id, sep = "")
+# tract_plot=tract
+# tract_plot$pop_density=data_plot[match(as.numeric(tract_plot$id),data_plot$tract),'pop_density']
+
+county <- readOGR(dsn = paste(getwd(),'/US_counties', sep = ''), layer = "cb_2014_us_county_500k")
+county <- fortify(county, region="GEOID")
+county$countyNum<-ind_prop_data[match(as.numeric(county$id),as.numeric(ind_prop_data$None)),'None']
+county$kmeans_cluster<-ind_prop_data[match(as.numeric(county$id),as.numeric(ind_prop_data$None)),'kmeans_4_cluster']
+county[county$countyNum<3000 & county$countyNum>1999,"long"]=county[county$countyNum<3000 &county$countyNum>1999,"long"]+rep(30, sum(county$countyNum<3000 &county$countyNum>1999, na.rm = TRUE))
+county[county$countyNum<3000 &county$countyNum>1999,"lat"]=county[county$countyNum<3000 &county$countyNum>1999,"lat"]-rep(30, sum(county$countyNum<3000 &county$countyNum>1999, na.rm = TRUE))
+
+state<- readOGR(dsn = paste(getwd(),'/US_counties', sep = ''), layer = "cb_2014_us_county_500k")
+state <- fortify(county, region="STATEFP")
+
+p <- ggplot() +
+  geom_polygon(data = county, aes(x = long, y = lat, group = group,
+                                      fill = kmeans_cluster)) +
+  geom_polygon(data = state, aes(x = long, y = lat, group = group),
+               fill = NA, color = "white", size = 0.001) +
+  coord_map() +
+  scale_fill_distiller(palette = "Dark2", labels=c('Larger Proportion of Manufacturing', 'Mixed', 'Larger Proportion of Accomodations and Food Services', 'Larger Proportion of Accomodations/foodService/Wholesale Trade'),name='K-Means Group') +
+  guides(fill = guide_legend(reverse = TRUE)) +
+  theme_nothing(legend = TRUE) +
+  labs(title = "Industry proporation k-means groups \n based on number of employees, busieness value conducted, and annual payroll",
+       fill = "")
+ggsave(p, file = "kmeans_ind.pdf", width = 10, height = 11)
