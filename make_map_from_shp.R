@@ -138,7 +138,7 @@ p6=ggplot(data=ind_group_1, aes(x=IndustryGroups, y=emp_prop, fill=IndustryGroup
   geom_bar(stat="identity", position=position_dodge(), colour="black")+
   labs(title = 'Worker Proportions based on Industry Group in Alemeda County', x = "Industry Groups", y = "Proportion of all employees in industry group")
 
-ggsave(p6, file = "emp_prop_Alemeda.df", width = 10, height = 7)
+ggsave(p6, file = "emp_prop_Alemeda.pdf", width = 10, height = 7)
 
 
 emp_per_county=aggregate(ind_data$EMP,by=list(ind_data$COUNTY), function(x) sum(as.numeric(x), na.rm =TRUE) )
@@ -162,8 +162,8 @@ county <- readOGR(dsn = paste(getwd(),'/US_counties', sep = ''), layer = "cb_201
 county <- fortify(county, region="GEOID")
 county$countyNum<-ind_prop_data[match(as.numeric(county$id),as.numeric(ind_prop_data$None)),'None']
 county$kmeans_cluster<-ind_prop_data[match(as.numeric(county$id),as.numeric(ind_prop_data$None)),'kmeans_4_cluster']
-county[county$countyNum<3000 & county$countyNum>1999,"long"]=county[county$countyNum<3000 &county$countyNum>1999,"long"]+rep(30, sum(county$countyNum<3000 &county$countyNum>1999, na.rm = TRUE))
-county[county$countyNum<3000 &county$countyNum>1999,"lat"]=county[county$countyNum<3000 &county$countyNum>1999,"lat"]-rep(30, sum(county$countyNum<3000 &county$countyNum>1999, na.rm = TRUE))
+# county[county$countyNum<3000 & county$countyNum>1999,"long"]=county[county$countyNum<3000 &county$countyNum>1999,"long"]+rep(30, sum(county$countyNum<3000 &county$countyNum>1999, na.rm = TRUE))
+# county[county$countyNum<3000 &county$countyNum>1999,"lat"]=county[county$countyNum<3000 &county$countyNum>1999,"lat"]-rep(30, sum(county$countyNum<3000 &county$countyNum>1999, na.rm = TRUE))
 
 state<- readOGR(dsn = paste(getwd(),'/US_counties', sep = ''), layer = "cb_2014_us_county_500k")
 state <- fortify(county, region="STATEFP")
@@ -179,4 +179,44 @@ p <- ggplot() +
   theme_nothing(legend = TRUE) +
   labs(title = "Industry proporation k-means groups \n based on number of employees, busieness value conducted, and annual payroll",
        fill = "")
+p
+ggsave(p, file = "kmeans_ind.pdf", width = 10, height = 11)
+
+anom_data <- read.csv("/home/seth/workspace_Unix/dataIncub/bbp/features_with_anom_flag.csv", stringsAsFactors = FALSE)
+anom_data['mean_download']=mean(anom_data$medianDownload)
+anom_data['mean_upload']=mean(anom_data$medianUpload)
+
+anom_data['download_def']=(anom_data$medianDownload-anom_data$mean_download)/anom_data$mean_download
+anom_data['upload_def']=(anom_data$medianUpload-anom_data$mean_upload)/anom_data$mean_upload
+
+county <- readOGR(dsn = paste(getwd(),'/US_counties', sep = ''), layer = "cb_2014_us_county_500k")
+county <- fortify(county, region="GEOID")
+county$upload_def<-anom_data[match(as.numeric(county$id),as.numeric(anom_data$geoID)),'upload_def']
+county$download_def<-anom_data[match(as.numeric(county$id),as.numeric(anom_data$geoID)),'download_def']
+# county$upload_def<-anom_data[match(as.numeric(county$id),as.numeric(anom_data$geoID)),'upload_def']
+county$y_predict_train<-anom_data[match(as.numeric(county$id),as.numeric(anom_data$geoID)),'y_pred_train']
+# county[county$countyNum<3000 & county$countyNum>1999,"long"]=county[county$countyNum<3000 &county$countyNum>1999,"long"]+rep(30, sum(county$countyNum<3000 &county$countyNum>1999, na.rm = TRUE))
+# county[county$countyNum<3000 &county$countyNum>1999,"lat"]=county[county$countyNum<3000 &county$countyNum>1999,"lat"]-rep(30, sum(county$countyNum<3000 &county$countyNum>1999, na.rm = TRUE))
+
+pe94.person$foo <- ifelse(!is.na(pe94.person$H01) & pe94.person$H01 == 12, 0, pe94.person$H03)
+county$to_check=0
+indices=(county$download_def<=-0.6 &county$y_predict_train==-1)
+county$to_check<-ifelse(indices, 0,1)
+
+
+state<- readOGR(dsn = paste(getwd(),'/US_counties', sep = ''), layer = "cb_2014_us_county_500k")
+state <- fortify(county, region="STATEFP")
+
+p <- ggplot() +
+  geom_polygon(data = county, aes(x = long, y = lat, group = group,
+                                  fill = to_check)) +
+  geom_polygon(data = state, aes(x = long, y = lat, group = group),
+               fill = NA, color = "white", size = 0.001) +
+  coord_map() +
+  scale_fill_distiller(palette = "Dark2") +
+  guides(fill = guide_legend(reverse = TRUE)) +
+  theme_nothing(legend = FALSE) +
+  labs(title = "Industry proporation k-means groups \n based on number of employees, busieness value conducted, and annual payroll",
+       fill = "")
+p
 ggsave(p, file = "kmeans_ind.pdf", width = 10, height = 11)
